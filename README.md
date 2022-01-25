@@ -131,5 +131,3 @@
 Текущий бэйзлайн, который надо побить для первой части - 0.91.# avito-case
 # avito-case
 # avito-case
-# avito-case
-# avito-case
