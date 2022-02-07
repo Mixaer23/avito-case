@@ -19,7 +19,7 @@ class Test:
         self.debug = debug
         self.logger = self._get_logger()
         self.data_dir = os.getenv('DATA_ROOT')
-        self.test_data_dir = '/app' + os.getenv('DATA_ROOT')
+        self.test_data_dir = os.getenv('TEST_DATA_ROOT')
         # вообще в кейсе не было такого пути
         # но вдруг он есть у вас
         self.user = os.getenv('USER')
