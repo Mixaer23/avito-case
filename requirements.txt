@@ -18,3 +18,5 @@ sklearn==0.0
 threadpoolctl==3.0.0
 tqdm==4.62.3
 wheel==0.37.1
+catboost==1.0.4
+emoji==1.6.3

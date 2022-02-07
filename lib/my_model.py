@@ -2,27 +2,36 @@ import pandas as pd
 import numpy as np
 from tqdm.auto import tqdm
 import string
-import joblib
 import nltk
 from nltk import word_tokenize
 import re
+import catboost
+import emoji
+from nltk.stem import *
+from nltk.stem.snowball import SnowballStemmer 
 
 def remove_punctuation(text):
-    return "".join([ch if ch not in string.punctuation 
-                    else ' ' for ch in text])
+    return "".join([ch if ch not in string.punctuation else ' ' for ch in text])
+
+def remove_numbers(text):
+    return ''.join([i if not i.isdigit() else ' ' for i in text])
 
 def remove_multiple_spaces(text):
-    return re.sub(r'\s+', ' ', text, flags=re.I)
+	return re.sub(r'\s+', ' ', text, flags=re.I)
 
-def start(df_res):  
+def remove_emoji(text):
+    return ''.join(char for char in text if char not in emoji.UNICODE_EMOJI)
+def start(df_val):  
+
+    stemmer = SnowballStemmer("russian")
    
     nltk.data.path = ['/app/lib/']
     
-    prep_text = [remove_multiple_spaces(remove_punctuation(text.lower())) 
-                 for text in tqdm(df_res['description'])]
+    prep_text_val = [remove_multiple_spaces(remove_emoji(remove_punctuation(text.lower()))) 
+                     for text in tqdm(df_val['description'])]
 
 
-    df_res['text_prep'] = prep_text
+    df_val['text_prep'] = prep_text_val
     
     russian_stopwords = []
 
@@ -31,54 +40,29 @@ def start(df_res):
             russian_stopwords.append(line.strip('\n'))
     
 
-    sw_texts_list = []
-    for text in tqdm(df_res['text_prep']):
+    stemmed_texts_list_val = []
+    for text in tqdm(df_val['text_prep']):
         tokens = word_tokenize(text)    
-        tokens = [token for token in tokens 
-                  if token not in russian_stopwords and token != ' ']
-        text = " ".join(tokens)
-        sw_texts_list.append(text)
+        stemmed_tokens = [stemmer.stem(token) for token in tokens if token not in russian_stopwords]
+        text = " ".join(stemmed_tokens)
+        stemmed_texts_list_val.append(text)
 
-    df_res['text_sw'] = sw_texts_list
+    df_val['text_stem'] = stemmed_texts_list_val
 
-    X_test = df_res['text_sw']
+    model_filename = "/app/lib/pred_model"
 
-    pipeline_filename = "/app/lib/my_pipeline.pkl"
+    cat_model = catboost.CatBoostClassifier()
 
-    logreg = joblib.load(pipeline_filename)
-
-    np.set_printoptions(suppress=True)
+    model = cat_model.load_model(model_filename)
     
-    lr_probs = logreg.predict_proba(X_test)
-    lr_probs = lr_probs[:, 0]
+    lr_probs = model.predict_proba(df_val[['title', 'subcategory', 'category', 'region',
+       'city', 'text_stem']])
+    lr_probs = lr_probs[:, 1]
 
     df = pd.DataFrame(np.around(lr_probs, decimals=2))
     
     df.columns = ['prediction']
-    # df.insert(0, 'index', df.index)
+
     print(df)
     
     return df
-
-    # df_res.proba.astype(np.float16)
-
-    # X_test.sort_values('index')
-
-    # df = pd.read_csv('train.csv')
-
-    # df = df[:100000]
-
-    # probability = logreg.predict_proba(df.description)
-
-    # df.loc[:,'prediction'] = np.round(probability[:,0], decimals=2)
-
-    # df.loc[:,'label'] = 'good'
-    # for i in tqdm(range(len(df.is_bad))):
-    #     if df.is_bad[i] == 1:
-    #         df.loc[:,'label'][i] = 'bad'
-
-    # df[['description','label','prediction']]
-
-    # df[['prediction']].to_excel('./prediction.xlsx')
-
-
